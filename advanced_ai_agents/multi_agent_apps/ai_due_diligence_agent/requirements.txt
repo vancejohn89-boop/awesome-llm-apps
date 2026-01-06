@@ -3,3 +3,8 @@ google-genai>=1.0.0
 python-dotenv>=1.0.0
 matplotlib>=3.8.0
 google-adk
+streamlit
+google-adk
+google-generativeai
+duckduckgo-search
+python-dotenv
