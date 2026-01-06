@@ -1,6 +1,5 @@
 import streamlit as st
-from google.adk.runners import Runner
-from google.adk.sessions import LocalSessionService # Added this
+from google.adk.runners import SimpleRunner # Changed this
 from agent import root_agent
 
 st.set_page_config(page_title="AI Due Diligence", page_icon="🕵️‍♂️")
@@ -14,13 +13,10 @@ if st.button("Start Analysis"):
         try:
             with st.spinner(f"🔍 The agents are collaborating on {company}..."):
                 
-                # 1. Create a local session service to hold the agent's memory
-                session_service = LocalSessionService()
+                # SimpleRunner handles the session and memory automatically
+                runner = SimpleRunner()
                 
-                # 2. Pass that service into the Runner
-                runner = Runner(session_service=session_service)
-                
-                # 3. Execute the analysis
+                # Execute the analysis using root_agent
                 result = runner.run(root_agent, input_text=company)
                 
                 st.subheader("Analysis Results")
@@ -28,5 +24,6 @@ if st.button("Start Analysis"):
                 
         except Exception as e:
             st.error(f"An error occurred: {e}")
+            st.info("Check your Logs in the bottom right for more details.")
     else:
         st.warning("Please enter a company name or URL.")
