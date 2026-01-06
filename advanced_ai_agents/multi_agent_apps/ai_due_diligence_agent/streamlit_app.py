@@ -1,16 +1,29 @@
 import streamlit as st
+from google.adk.runners import Runner
 from agent import due_diligence_team
 
-st.title("🕵️‍♂️ AI Due Diligence Agent")
-st.write("Enter a company name to start the research.")
+st.set_page_config(page_title="AI Due Diligence", page_icon="🕵️‍♂️")
+st.title("🕵️‍♂️ AI Due Diligence Agent Team")
+st.write("Powered by Google ADK & Gemini")
 
-company = st.text_input("Company Name:", placeholder="e.g. Nvidia")
+# Sidebar for API Key if not in secrets
+with st.sidebar:
+    st.info("Agent team: Researcher -> Financial Analyst -> Reporter")
 
-if st.button("Run Research"):
+company = st.text_input("Enter Company Name for Research:", placeholder="e.g. NVIDIA")
+
+if st.button("Start Analysis"):
     if company:
-        with st.spinner("Team is working..."):
-            # This calls the 'brain' from your agent.py
-            result = due_diligence_team.run(company)
-            st.markdown(result)
+        try:
+            with st.spinner(f"🔍 Analyzing {company}... This may take a minute."):
+                # ADK requires a Runner to handle the agent execution
+                runner = Runner()
+                # We use .run() to get the final output from the team
+                result = runner.run(due_diligence_team, input_text=company)
+                
+                st.subheader("Analysis Results")
+                st.markdown(result.text)
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
     else:
-        st.warning("Please enter a company name.")
+        st.warning("Please enter a company name first.")
