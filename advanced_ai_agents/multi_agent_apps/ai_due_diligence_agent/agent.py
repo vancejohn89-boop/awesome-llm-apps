@@ -378,6 +378,11 @@ The pipeline will:
 Answer directly about VC, due diligence, or how you can help.
 
 After analysis, summarize key findings and mention the generated artifacts.
+
+IMPORTANT: Once the DueDiligencePipeline finishes, you MUST repeat the 
+entire final 'investor_memo' in your response so the user can see it. 
+Do not just say 'the task is done.'
+
 """,
     sub_agents=[due_diligence_pipeline],
 )
