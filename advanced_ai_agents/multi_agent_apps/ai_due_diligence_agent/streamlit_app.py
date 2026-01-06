@@ -5,18 +5,19 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 from agent import root_agent
 
-# UI Setup
 st.set_page_config(page_title="AI Due Diligence", page_icon="🕵️‍♂️", layout="wide")
 st.title("🕵️‍♂️ AI Due Diligence Agent Team")
 
-company = st.text_input("Enter Company Name or URL:", placeholder="e.g. NVIDIA or https://agno.com")
+company = st.text_input("Enter Company Name or URL:", placeholder="e.g. NVIDIA")
 
 if st.button("Start Analysis"):
     if company:
+        # Create a container for the streaming text
+        report_container = st.empty()
+        status_text = st.empty()
+        
         try:
-            with st.spinner("🚀 Agents are starting the research pipeline..."):
-                
-                # 1. Setup Session & Runner
+            with st.spinner("🚀 Initializing Pipeline..."):
                 session_service = InMemorySessionService()
                 runner = Runner(
                     app_name="due_diligence_app", 
@@ -24,62 +25,44 @@ if st.button("Start Analysis"):
                     session_service=session_service
                 )
                 
-                # 2. Prepare Message
                 user_message = types.Content(
                     role="user",
                     parts=[types.Part(text=company)]
                 )
-                
-                # 3. Execution Container
-                async def run_analysis():
-                    user_id = "user_123"
-                    session_id = "session_456"
-                    
+
+                async def run_and_stream():
+                    full_response = ""
+                    # The stream yields events as they happen
                     event_stream = runner.run(
-                        user_id=user_id,
-                        session_id=session_id,
+                        user_id="user_1",
+                        session_id="session_1",
                         new_message=user_message
                     )
                     
-                    accumulated_text = ""
-                    status_bar = st.empty()
-                    
                     for event in event_stream:
-                        # Update status based on which agent is talking
+                        # 1. Update status based on the current agent
                         if hasattr(event, 'author') and event.author:
-                            status_bar.info(f"Currently Active: **{event.author}**")
+                            status_text.write(f"⚙️ **Agent Acting:** {event.author}")
                         
-                        # Capture text from content parts
+                        # 2. Append and display text parts immediately
                         if event.content and event.content.parts:
                             for part in event.content.parts:
                                 if hasattr(part, 'text') and part.text:
-                                    accumulated_text += part.text
-                        
-                        # Check for a "Final Response" flag
-                        if hasattr(event, 'is_final_response') and event.is_final_response():
-                            if event.content and event.content.parts:
-                                return event.content.parts[0].text
-
-                    # 4. BACKUP PLAN: If stream text is empty, pull directly from state
-                    if not accumulated_text:
-                        session = await session_service.get_session(
-                            app_name="due_diligence_app", 
-                            user_id=user_id, 
-                            session_id=session_id
-                        )
-                        # We look for the 'investor_memo' key defined in Stage 5 of your agent.py
-                        return session.state.get("investor_memo", "Analysis complete, but no memo was found in state.")
+                                    full_response += part.text
+                                    # This "streams" the text to the UI live
+                                    report_container.markdown(full_response + " ▌")
                     
-                    return accumulated_text
+                    return full_response
 
-                # Run the async loop
-                final_report = asyncio.run(run_analysis())
+                # Execute the stream
+                final_output = asyncio.run(run_and_stream())
                 
-                # Display Result
-                st.success("✅ Analysis Complete!")
-                st.markdown("---")
-                st.markdown(final_report)
-                
+                # Final cleanup
+                status_text.empty()
+                report_container.markdown(final_output)
+                if not final_output:
+                    st.error("Agents completed but no text was captured. Check API Key quotas.")
+
         except Exception as e:
             st.error(f"Error: {e}")
     else:
