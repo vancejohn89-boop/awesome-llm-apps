@@ -15,37 +15,38 @@ if st.button("Start Analysis"):
         try:
             with st.spinner(f"🔍 The agents are collaborating on {company}..."):
                 
-                # 1. Initialize the session service (this is the agent's memory)
+                # 1. Initialize memory (Session Service)
                 session_service = InMemorySessionService()
                 
-                # 2. Setup the Runner with the agent and memory
+                # 2. Setup the Runner with the required 'app_name'
+                # We name it 'ai_due_diligence' so the runner has an identity
                 runner = Runner(
+                    app_name="ai_due_diligence", 
                     agent=root_agent,
                     session_service=session_service
                 )
                 
-                # 3. Create a session for this specific run
-                # We use 'await' because ADK is built on asyncio
+                # 3. Create an async function to run the agent
                 async def run_analysis():
-                    # Generate unique IDs for this user session
                     user_id = "streamlit_user"
                     session_id = "current_analysis"
                     
-                    # Run the agent (this yields events as they happen)
-                    result_text = ""
-                    events = runner.run(
+                    # In newer ADK versions, we pass the query as 'input_text'
+                    event_stream = runner.run(
                         user_id=user_id,
                         session_id=session_id,
                         input_text=company
                     )
                     
-                    for event in events:
-                        # Check if this is the final answer from the agents
-                        if event.is_final_response():
-                            return event.content.parts[0].text
-                    return "No final report generated."
+                    final_text = ""
+                    for event in event_stream:
+                        # Stream the result if it contains text
+                        if hasattr(event, 'content') and event.content.parts:
+                            final_text += event.content.parts[0].text
+                    
+                    return final_text if final_text else "No response generated."
 
-                # Execute the async function
+                # Execute
                 final_report = asyncio.run(run_analysis())
                 
                 st.subheader("Analysis Results")
@@ -53,6 +54,6 @@ if st.button("Start Analysis"):
                 
         except Exception as e:
             st.error(f"An error occurred: {e}")
-            st.info("Ensure your GOOGLE_API_KEY is correct in the Streamlit Secrets.")
+            st.info("Ensure your GOOGLE_API_KEY is in Streamlit Secrets.")
     else:
         st.warning("Please enter a company name or URL.")
