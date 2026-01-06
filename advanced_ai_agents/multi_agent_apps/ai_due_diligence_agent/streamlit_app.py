@@ -1,5 +1,7 @@
 import streamlit as st
-from google.adk.runners import SimpleRunner # Changed this
+import asyncio
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
 from agent import root_agent
 
 st.set_page_config(page_title="AI Due Diligence", page_icon="🕵️‍♂️")
@@ -13,17 +15,44 @@ if st.button("Start Analysis"):
         try:
             with st.spinner(f"🔍 The agents are collaborating on {company}..."):
                 
-                # SimpleRunner handles the session and memory automatically
-                runner = SimpleRunner()
+                # 1. Initialize the session service (this is the agent's memory)
+                session_service = InMemorySessionService()
                 
-                # Execute the analysis using root_agent
-                result = runner.run(root_agent, input_text=company)
+                # 2. Setup the Runner with the agent and memory
+                runner = Runner(
+                    agent=root_agent,
+                    session_service=session_service
+                )
+                
+                # 3. Create a session for this specific run
+                # We use 'await' because ADK is built on asyncio
+                async def run_analysis():
+                    # Generate unique IDs for this user session
+                    user_id = "streamlit_user"
+                    session_id = "current_analysis"
+                    
+                    # Run the agent (this yields events as they happen)
+                    result_text = ""
+                    events = runner.run(
+                        user_id=user_id,
+                        session_id=session_id,
+                        input_text=company
+                    )
+                    
+                    for event in events:
+                        # Check if this is the final answer from the agents
+                        if event.is_final_response():
+                            return event.content.parts[0].text
+                    return "No final report generated."
+
+                # Execute the async function
+                final_report = asyncio.run(run_analysis())
                 
                 st.subheader("Analysis Results")
-                st.markdown(result.text)
+                st.markdown(final_report)
                 
         except Exception as e:
             st.error(f"An error occurred: {e}")
-            st.info("Check your Logs in the bottom right for more details.")
+            st.info("Ensure your GOOGLE_API_KEY is correct in the Streamlit Secrets.")
     else:
         st.warning("Please enter a company name or URL.")
