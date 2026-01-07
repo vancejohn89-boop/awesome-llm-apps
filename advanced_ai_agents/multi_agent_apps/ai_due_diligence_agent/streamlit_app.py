@@ -6,17 +6,17 @@ from google.genai import types
 from agent import root_agent
 
 st.set_page_config(page_title="AI Due Diligence", page_icon="🕵️‍♂️", layout="wide")
-st.title("🕵️‍♂️ AI Due Diligence Agent Team")
+st.title("🕵️‍♂️ AI Due Diligence Agent: X-Ray Mode")
 
-company = st.text_input("Enter Company Name or URL:", placeholder="e.g. NVIDIA")
+company = st.text_input("Enter Company Name:", placeholder="e.g. NVIDIA")
 
 if st.button("Start Analysis"):
     if company:
-        status_text = st.empty()
-        report_container = st.empty()
+        # We use a code block to show raw agent "chatter" for debugging
+        debug_area = st.expander("🛠️ Agent Logs (X-Ray Mode)", expanded=True)
+        report_area = st.empty()
         
         try:
-            # Simple setup: one session service, one runner
             session_service = InMemorySessionService()
             runner = Runner(
                 app_name="due_diligence_app", 
@@ -26,38 +26,41 @@ if st.button("Start Analysis"):
             
             user_message = types.Content(role="user", parts=[types.Part(text=company)])
 
-            async def run_analysis():
+            async def run_with_logs():
                 full_text = ""
-                # We use the simplest runner.run signature
-                events = runner.run(
-                    user_id="default_user",
-                    session_id="default_session",
+                event_stream = runner.run(
+                    user_id="debug_user",
+                    session_id="debug_session",
                     new_message=user_message
                 )
                 
-                for event in events:
-                    # Capture which agent is talking
-                    if hasattr(event, 'author') and event.author:
-                        status_text.info(f"⚙️ **Processing Stage:** {event.author}")
-                    
-                    # Capture text chunks
-                    if event.content and event.content.parts:
-                        for part in event.content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                full_text += part.text
-                                # Live update the UI
-                                report_container.markdown(full_text)
+                for event in event_stream:
+                    # 1. Print RAW event info to the Debug Area
+                    with debug_area:
+                        if hasattr(event, 'author'):
+                            st.write(f"👉 **{event.author}** is active...")
+                        
+                        # Check for Tool Calls (The likely culprit)
+                        if event.content and event.content.parts:
+                            for part in event.content.parts:
+                                if hasattr(part, 'function_call'):
+                                    st.warning(f"🔧 Tool Call: {part.function_call.name}")
+                                    st.code(part.function_call.args)
+                                
+                                if hasattr(part, 'text') and part.text:
+                                    full_text += part.text
+                                    report_area.markdown(full_text)
+                
                 return full_text
 
             # Execute
-            final_result = asyncio.run(run_analysis())
+            result = asyncio.run(run_with_logs())
             
-            if final_result:
-                status_text.success("✅ Analysis Complete!")
-            else:
-                st.error("No text was returned. Check if your API Key is valid and tools are working.")
+            if not result:
+                st.error("🏁 The pipeline finished but returned ZERO text. This almost always means the first tool (google_search) failed.")
+                st.info("Check: Is your GOOGLE_API_KEY valid and does it have the 'Google Search Service' enabled in the Google Cloud Console?")
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Critical Error: {e}")
     else:
         st.warning("Please enter a company name.")
