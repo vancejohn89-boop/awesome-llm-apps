@@ -1,88 +1,89 @@
 import os
 from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.tools import google_search
-# Import your other custom tools from your tools.py file
-# from tools import generate_financial_chart, generate_html_report
 
-# 1. Researcher: Gathers data using the built-in Google Search
+# 1. Researcher: Uses built-in Google Search grounding
+# No separate API keys or CX IDs needed; it uses your main Gemini key.
 researcher_agent = LlmAgent(
     name="CompanyResearcher",
     model="gemini-1.5-flash",
-    description="Researches company background, recent news, and key data points.",
+    description="Researches company background and recent news using Google Search.",
     instruction="""
-    Use Google Search to find the latest information about the target company. 
-    Focus on:
-    - Recent news and press releases
-    - Core business model and products
-    - Key executives and headquarters
+    Use Google Search to find current information about the target company. 
+    Look for:
+    - Core business operations and recent news.
+    - Key financial indicators or recent quarterly performance mentions.
+    - Major competitors and market position.
     """,
     tools=[google_search],
-    output_key="research_data"
+    output_key="research_data"  # This saves the output into session memory
 )
 
-# 2. Market Analyst: Evaluates the landscape based on research
+# 2. Market Analyst: Consumes data from the Researcher
 analyst_agent = LlmAgent(
     name="MarketAnalyst",
     model="gemini-1.5-flash",
-    description="Analyzes market position and competition.",
+    description="Analyzes the market landscape and competition.",
     instruction="""
-    Using the {research_data}, identify the top 3 competitors and 
-    analyze the company's competitive advantages (moats).
+    Analyze the company's competitive moats based on this research: {research_data}.
+    Identify at least three strengths and two market threats.
     """,
     output_key="market_analysis"
 )
 
-# 3. Financial Lead: Projects growth and numbers
+# 3. Financial Lead: Projects growth
 financial_agent = LlmAgent(
     name="FinancialLead",
     model="gemini-1.5-flash",
-    description="Evaluates financial health and growth prospects.",
+    description="Evaluates growth prospects and risks.",
     instruction="""
-    Based on the {research_data}, summarize the company's revenue 
-    streams and identify potential financial risks or growth drivers.
+    Review the findings: {research_data}. 
+    Summarize the potential for future revenue growth and identify 
+    any red flags found in recent news or financials.
     """,
     output_key="financial_summary"
 )
 
-# 4. Investor Memo Agent: Synthesizes everything into the final report
-memo_agent = LlmAgent(
+# 4. Investor Memo Agent: Synthesizes final report
+memo_writer = LlmAgent(
     name="MemoWriter",
     model="gemini-1.5-flash",
-    description="Writes the final professional investment memo.",
+    description="Synthesizes all findings into a professional memo.",
     instruction="""
-    Synthesize the following into a professional investment memo:
+    You are a Senior Investment Associate. Combine these inputs:
     - Research: {research_data}
-    - Market Analysis: {market_analysis}
+    - Analysis: {market_analysis}
     - Financials: {financial_summary}
     
-    Format the output with clear headers: # Summary, ## Market, ## Financials, and ### Recommendation.
+    Produce a final professional Investment Memo. Use Markdown headers 
+    (# Summary, ## Analysis, etc.) and a clear Recommendation.
     """,
     output_key="investor_memo"
 )
 
-# 5. The Pipeline: Coordinates the sequence of work
+# 5. The Sequential Pipeline (The Assembly Line)
+# This ensures agents run in order: 1 -> 2 -> 3 -> 4
 due_diligence_pipeline = SequentialAgent(
     name="DueDiligencePipeline",
-    description="A step-by-step pipeline for deep company analysis.",
+    description="Executes a step-by-step company analysis workflow.",
     sub_agents=[
         researcher_agent, 
         analyst_agent, 
         financial_agent, 
-        memo_agent
+        memo_writer
     ]
 )
 
-# 6. The Root Agent: The "Manager" that interacts with Streamlit
+# 6. The Manager (Root Agent): The one Streamlit talks to
 root_agent = LlmAgent(
     name="DueDiligenceManager",
     model="gemini-1.5-flash",
-    description="Main entry point for the Due Diligence team.",
+    description="Entry point for the due diligence team.",
     instruction="""
-    You are the manager of a due diligence team. 
-    1. Pass the user's company request to the 'DueDiligencePipeline'.
-    2. Once the pipeline is complete, retrieve the final 'investor_memo'.
-    3. IMPORTANT: You must repeat the full text of the 'investor_memo' 
-       starting with 'FINAL REPORT:' in your response.
+    1. Delegate the user's request to the 'DueDiligencePipeline'.
+    2. Once the pipeline finishes, retrieve the content from 'investor_memo'.
+    3. IMPORTANT: Your response MUST be the full text of that memo. 
+       Start your response with 'FINAL REPORT:' so the UI knows it is complete.
     """,
     sub_agents=[due_diligence_pipeline]
 )
