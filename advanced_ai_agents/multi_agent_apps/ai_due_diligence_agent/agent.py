@@ -100,7 +100,7 @@ Be specific with numbers where available. For early-stage, estimate based on com
 
 financial_modeling_agent = LlmAgent(
     name="FinancialModelingAgent",
-    model="gemini-3-pro-preview",
+    model="gemini-1.5-flash",
     description="Builds financial models and generates projection charts",
     instruction="""
 You are a financial analyst building investment models.
@@ -153,7 +153,7 @@ Do NOT write or show any Python code. Just use the tool.
 
 risk_assessment_agent = LlmAgent(
     name="RiskAssessmentAgent",
-    model="gemini-3-pro-preview",
+    model="gemini-1.5-flash",
     description="Conducts deep risk analysis using extended reasoning",
     instruction="""
 You are a senior risk analyst at a top-tier VC firm.
@@ -195,7 +195,7 @@ End with:
 
 investor_memo_agent = LlmAgent(
     name="InvestorMemoAgent",
-    model="gemini-3-pro-preview",
+    model="gemini-1.5-flash",
     description="Synthesizes all findings into a structured investor memo",
     instruction="""
 You are a senior investment partner writing the investment memo.
