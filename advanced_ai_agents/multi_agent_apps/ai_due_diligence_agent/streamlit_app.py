@@ -1,5 +1,6 @@
 import streamlit as st
 import asyncio
+import time
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
@@ -12,58 +13,73 @@ company = st.text_input("Enter Company Name or URL:", placeholder="e.g. NVIDIA")
 
 if st.button("Start Analysis"):
     if company:
-        # Create a container for the streaming text
-        report_container = st.empty()
         status_text = st.empty()
+        report_container = st.empty()
         
         try:
-            with st.spinner("🚀 Initializing Pipeline..."):
-                session_service = InMemorySessionService()
-                runner = Runner(
-                    app_name="due_diligence_app", 
-                    agent=root_agent,
-                    session_service=session_service
+            # 1. Initialize Services
+            session_service = InMemorySessionService()
+            runner = Runner(
+                app_name="due_diligence_app", 
+                agent=root_agent,
+                session_service=session_service
+            )
+            
+            # 2. Setup IDs and Message
+            USER_ID = "user_primary"
+            SESSION_ID = "session_active"
+            user_message = types.Content(role="user", parts=[types.Part(text=company)])
+
+            async def run_pipeline():
+                full_text = ""
+                # We use run_async to handle the event stream properly
+                events = runner.run(
+                    user_id=USER_ID,
+                    session_id=SESSION_ID,
+                    new_message=user_message
                 )
                 
-                user_message = types.Content(
-                    role="user",
-                    parts=[types.Part(text=company)]
-                )
-
-                async def run_and_stream():
-                    full_response = ""
-                    # The stream yields events as they happen
-                    event_stream = runner.run(
-                        user_id="user_1",
-                        session_id="session_1",
-                        new_message=user_message
+                for event in events:
+                    # Update the UI with the current acting agent
+                    if hasattr(event, 'author') and event.author:
+                        status_text.info(f"⚙️ **Processing Stage:** {event.author}")
+                    
+                    # Capture streaming text
+                    if event.content and event.content.parts:
+                        for part in event.content.parts:
+                            if hasattr(part, 'text') and part.text:
+                                full_text += part.text
+                                report_container.markdown(full_text + " ▌")
+                
+                # 3. CRITICAL BACKUP: If stream is empty, wait and pull from State
+                if not full_text:
+                    status_text.warning("🏁 Pipeline finished. Finalizing report...")
+                    # Give the state a moment to commit (common in multi-agent handoffs)
+                    await asyncio.sleep(2) 
+                    
+                    # Retrieve the session manually from the service
+                    session = await session_service.get_session(
+                        app_name="due_diligence_app", 
+                        user_id=USER_ID, 
+                        session_id=SESSION_ID
                     )
                     
-                    for event in event_stream:
-                        # 1. Update status based on the current agent
-                        if hasattr(event, 'author') and event.author:
-                            status_text.write(f"⚙️ **Agent Acting:** {event.author}")
-                        
-                        # 2. Append and display text parts immediately
-                        if event.content and event.content.parts:
-                            for part in event.content.parts:
-                                if hasattr(part, 'text') and part.text:
-                                    full_response += part.text
-                                    # This "streams" the text to the UI live
-                                    report_container.markdown(full_response + " ▌")
-                    
-                    return full_response
-
-                # Execute the stream
-                final_output = asyncio.run(run_and_stream())
+                    if session and session.state:
+                        # Pull the key specifically defined in Stage 5 of agent.py
+                        full_text = session.state.get("investor_memo", "")
                 
-                # Final cleanup
-                status_text.empty()
-                report_container.markdown(final_output)
-                if not final_output:
-                    st.error("Agents completed but no text was captured. Check API Key quotas.")
+                return full_response if full_text else None
+
+            # Execute the async function in a sync Streamlit context
+            result = asyncio.run(run_pipeline())
+            
+            if result:
+                status_text.success("✅ Analysis Complete!")
+                report_container.markdown(result)
+            else:
+                st.error("Agents completed but the report was not found. Please check your 'agent.py' output_key names.")
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"Execution Error: {e}")
     else:
-        st.warning("Please enter a company name.")
+        st.warning("Please enter a target company.")
