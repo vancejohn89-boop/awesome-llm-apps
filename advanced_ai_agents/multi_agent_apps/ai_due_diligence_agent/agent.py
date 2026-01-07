@@ -1,47 +1,42 @@
-import os
 from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.tools import google_search
 
-# 1. Researcher: Using the brand new Gemini 3 Flash
+# 1. Define INDIVIDUAL agents first
 researcher_agent = LlmAgent(
-    name="CompanyResearcher",
-    model="gemini-3-flash", # <--- UPDATED MODEL ID
-    description="Researches company background and news using Google Search.",
-    instruction="""
-    Use Google Search to find current information about the target company. 
-    Focus on business operations, recent quarterly news, and market position.
-    """,
-    tools=[google_search],
-    output_key="research_data"
-)
-
-# 2. Market Analyst: Using Gemini 3 Flash
-analyst_agent = LlmAgent(
-    name="MarketAnalyst",
+    name="Researcher",
     model="gemini-3-flash",
-    description="Analyzes competition and market moats.",
-    instruction="""
-    Analyze the company's competitive moats based on this research: {research_data}.
-    Identify strengths and market threats.
-    """,
-    output_key="market_analysis"
+    instruction="Research the company...",
+    tools=[google_search]
 )
 
-# ... [Financial and Memo agents follow the same pattern] ...
+analyst_agent = LlmAgent(
+    name="Analyst",
+    model="gemini-3-flash",
+    instruction="Analyze the research data..."
+)
 
-# 5. The Sequential Pipeline
+financial_agent = LlmAgent( # <--- Define this BEFORE line 35
+    name="FinancialAnalyst",
+    model="gemini-3-flash",
+    instruction="Evaluate financial health..."
+)
+
+memo_writer = LlmAgent( # <--- Define this BEFORE line 35
+    name="MemoWriter",
+    model="gemini-3-flash",
+    instruction="Synthesize everything into an investor memo."
+)
+
+# 2. NOW define the pipeline using the variables created above
 due_diligence_pipeline = SequentialAgent(
     name="DueDiligencePipeline",
     sub_agents=[researcher_agent, analyst_agent, financial_agent, memo_writer]
 )
 
-# 6. The Manager (Root Agent)
+# 3. Define the root agent last
 root_agent = LlmAgent(
     name="DueDiligenceManager",
     model="gemini-3-flash",
-    instruction="""
-    Delegate the user's request to the 'DueDiligencePipeline'.
-    Repeat the full 'investor_memo' starting with 'FINAL REPORT:'.
-    """,
+    instruction="Coordinate the due diligence process.",
     sub_agents=[due_diligence_pipeline]
 )
