@@ -22,7 +22,7 @@ from tools import generate_html_report, generate_infographic, generate_financial
 
 company_research_agent = LlmAgent(
     name="CompanyResearchAgent",
-    model="gemini-3-flash-preview",
+    model="gemini-1.5-flash",
     description="Researches company information using web search",
     instruction="""
 You are a senior investment analyst conducting company research.
@@ -66,7 +66,7 @@ Be thorough but realistic about what's publicly available for early-stage compan
 
 market_analysis_agent = LlmAgent(
     name="MarketAnalysisAgent",
-    model="gemini-3-flash-preview",
+    model="gemini-1.5-flash",
     description="Analyzes market size, competitors, and positioning",
     instruction="""
 You are a market research analyst.
@@ -263,7 +263,7 @@ Create an INVESTOR MEMO:
 
 report_generator_agent = LlmAgent(
     name="ReportGeneratorAgent",
-    model="gemini-3-flash-preview",
+    model="gemini-1.5-flash",
     description="Generates professional HTML investment report",
     instruction="""
 You create professional investment reports.
@@ -295,7 +295,7 @@ After generating, confirm the report was saved as an artifact.
 
 infographic_generator_agent = LlmAgent(
     name="InfographicGeneratorAgent",
-    model="gemini-3-flash-preview",
+    model="gemini-1.5-flash",
     description="Creates visual investment summary infographic",
     instruction="""
 You create visual investment summaries.
@@ -347,7 +347,7 @@ due_diligence_pipeline = SequentialAgent(
 
 root_agent = LlmAgent(
     name="DueDiligenceAnalyst",
-    model="gemini-3-flash-preview",
+    model="gemini-1.5-flash",
     description="AI-powered due diligence analyst for startup investments",
     instruction="""
 You are a senior investment analyst helping evaluate startup investment opportunities.
