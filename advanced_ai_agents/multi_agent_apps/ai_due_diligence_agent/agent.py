@@ -24,6 +24,14 @@ company_research_agent = LlmAgent(
     name="CompanyResearchAgent",
     model="gemini-1.5-flash",
     description="Researches company information using web search",
+    Use Google Search to find the latest information about the target company. 
+    Focus on:
+    - Recent news and press releases
+    - Core business model and products
+    - Key executives and headquarters
+    """,
+    tools=[google_search],
+    output_key="research_data"
     instruction="""
 You are a senior investment analyst conducting company research.
 
