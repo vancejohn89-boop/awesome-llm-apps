@@ -1,5 +1,7 @@
 from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.tools import google_search
+# ...
+tools=[google_search]
 
 # 1. Define INDIVIDUAL agents first
 researcher_agent = LlmAgent(
