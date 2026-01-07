@@ -389,3 +389,15 @@ Do not just say 'the task is done.'
 
 
 __all__ = ["root_agent"]
+root_agent = LlmAgent(
+    name="DueDiligenceAnalyst",
+    model="gemini-1.5-flash", # Use flash for higher quota
+    description="AI-powered due diligence analyst",
+    instruction="""
+    You are the manager. 
+    1. Send the user's request to 'DueDiligencePipeline'.
+    2. WAIT for the pipeline to finish.
+    3. Once finished, you MUST provide a final response that starts with 'FINAL REPORT:' 
+       followed by a full summary of the investment memo.
+    """
+)
