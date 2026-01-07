@@ -40,3 +40,14 @@ root_agent = LlmAgent(
     instruction="Coordinate the due diligence process.",
     sub_agents=[due_diligence_pipeline]
 )
+root_agent = LlmAgent(
+    name="DueDiligenceManager",
+    model="gemini-3-flash",
+    instruction="""
+    1. Run the 'DueDiligencePipeline'.
+    2. After it finishes, look at the state for 'investor_memo'.
+    3. You MUST output the full text of that memo. Do not summarize it. 
+    4. If 'investor_memo' is empty, explain why the search failed.
+    """,
+    sub_agents=[due_diligence_pipeline]
+)
