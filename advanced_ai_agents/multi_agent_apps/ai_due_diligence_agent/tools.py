@@ -2,7 +2,7 @@
 
 Provides HTML report generation, financial charts, and infographic creation.
 """
-
+from google.adk.tools import google_search
 import logging
 import io
 from pathlib import Path
